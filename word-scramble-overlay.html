@@ -51,6 +51,16 @@ body[data-theme="halloween"]{
   --panel:#1A1210; --deep:#0B0807; --accent:#FF7A1A; --text:#FFF3E6;
   --reveal:#A6E22E; --win:#C084FC; --tile-edge:#2E201B; --win-edge:#8B5CC9;
 }
+/* Dark Rose: deep raspberry panel with light pink text */
+body[data-theme="rosedark"]{
+  --panel:#7A0F3C; --deep:#5A0A2C; --accent:#FFC2D8; --text:#FFF0F5;
+  --reveal:#FFB3CF; --win:#FFC2D8; --tile-edge:#9E2457; --win-edge:#E08AAA;
+}
+/* Rose: light pink panel with deep raspberry text, high contrast on any game footage */
+body[data-theme="rose"]{
+  --panel:#FFE6EF; --deep:#F6C3D5; --accent:#C2185B; --text:#3B0C22;
+  --reveal:#8E0F44; --win:#C2185B; --tile-edge:#E39BB6; --win-edge:#8E0F44;
+}
 
 *{box-sizing:border-box;margin:0;padding:0}
 html{background:transparent}
@@ -244,15 +254,15 @@ body[data-board="off"] .board{display:none}
 </div>
 <script>
 /* ================== SETTINGS: edit these ================== */
-const CHANNEL = "";     // your Twitch channel, lowercase, no #
+const CHANNEL = "teamnopants";     // your Twitch channel, lowercase, no #
 const REVEAL_EVERY_SEC = 40;             // a new letter appears this often; the last letter is never revealed
 const PAUSE_BETWEEN_WORDS_SEC = 8;       // how long the answer stays up before the next word
 const LEADERBOARD_SIZE = 3;
 const IGNORE_USERS = ["firebot", "nightbot", "streamelements", "sery_bot"]; // bots that should never win (lowercase)
 // Optional: Firebot preset effect list to run when someone wins (chat shout-out, currency, sound).
 // Leave "" to skip. See setup notes for how to get this ID.
-const FIREBOT_PRESET_LIST_ID = "";
-const FIREBOT_API = "";
+const FIREBOT_PRESET_LIST_ID = "efdf1f3f-8991-40d4-a130-3ba0d8d1c152";
+const FIREBOT_API = "http://localhost:7472/api/v1/effects/preset/";
 
 // Optional: Streamer.bot action to run when someone wins. Use the action's exact name. Leave "" to skip.
 // Needs Streamer.bot's WebSocket Server turned on (Servers/Clients tab).
@@ -267,7 +277,7 @@ const MIXITUP_API = "http://localhost:8911/api/v2/commands/";
 
 // Google Sheet word list. Paste your "Publish to web" CSV link between the quotes.
 // Words go in column A, one per cell. Leave "" to use the built-in list below.
-const WORDS_SHEET_URL = ";
+const WORDS_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQc1-_7dPwLLzv0MR6j-TB1BUc75fQznF4UDDRQ9yYTt0AeOVQNJVYPmUYAJPLlOiWLsdNeUCTMEBW3/pub?gid=0&single=true&output=csv";
 const SHEET_CHECK_EVERY_SEC = 60;        // how often to look for changes in the sheet
 
 // Built-in list: used when no sheet is set, or if the sheet can't be reached.
@@ -504,6 +514,8 @@ const THEMES = {
   forest:    { name:"Forest",    colors:["#1E3A2F","#A8D99B"] },
   midnight:  { name:"Midnight",  colors:["#1B1D25","#7FD4FF"] },
   halloween: { name:"Halloween", colors:["#1A1210","#FF7A1A"] },
+  rose:      { name:"Rose",      colors:["#FFE6EF","#C2185B"] },
+  rosedark:  { name:"Dark Rose", colors:["#7A0F3C","#FFC2D8"] },
 };
 const STYLE_STORE = "wordhunt-style-" + CHANNEL;
 const style = { theme:"lavender", size:"medium", layout:"tall", board:"on", scramble:"off", reveal:"on", revealSec:REVEAL_EVERY_SEC };
