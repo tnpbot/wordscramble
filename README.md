@@ -1,4 +1,4 @@
-# Word Scramble v1
+# Word Scramble
 
 A hands-off Twitch chat word guessing game for OBS. Viewers type guesses in chat whenever they like, and the first correct guess wins the round.
 
@@ -6,8 +6,6 @@ A hands-off Twitch chat word guessing game for OBS. Viewers type guesses in chat
 - More letters can appear on a timer, but the last letter is never revealed.
 - The winner goes on the on-screen leaderboard, and the next word starts a few seconds later.
 - No commands, mods, or streamer involvement are needed once it's running.
-- Only reads chat so no Twitch authorization is needed.
-- Connecting a bot like Firebot (instructions below) will allow posting messages to chat.
 
 ## Contents
 
@@ -16,7 +14,10 @@ A hands-off Twitch chat word guessing game for OBS. Viewers type guesses in chat
 - [Step 2: Add it to OBS](#step-2-add-it-to-obs)
 - [Step 3: Set up your word list (optional)](#step-3-set-up-your-word-list-optional)
 - [Step 4: Choose the look and game options](#step-4-choose-the-look-and-game-options)
-- [Step 5: Connect Firebot (optional)](#step-5-connect-firebot-optional)
+- [Step 5: Connect a chat bot (optional)](#step-5-connect-a-chat-bot-optional)
+  - [Firebot](#firebot)
+  - [Streamer.bot](#streamerbot)
+  - [Mix It Up](#mix-it-up)
 - [Troubleshooting](#troubleshooting)
 
 ## Requirements
@@ -25,7 +26,7 @@ A hands-off Twitch chat word guessing game for OBS. Viewers type guesses in chat
 - **The Word Scramble game file**, the `.html` file in this repository
 - **A text editor** such as Notepad (Windows), TextEdit in plain text mode (Mac), or VS Code
 - **A Google account** (optional), for your own live word list
-- **Firebot** (optional), for chat announcements and currency
+- **Firebot, Streamer.bot, or Mix It Up** (optional), for chat announcements, sounds, or points
 
 ## Step 1: Save the file and set your channel
 
@@ -49,13 +50,17 @@ The other settings in that section are optional:
 | `LEADERBOARD_SIZE` | How many names the leaderboard shows | `5` |
 | `WORDS_SHEET_URL` | Your Google Sheet link ([Step 3](#step-3-set-up-your-word-list-optional)) | empty |
 | `SHEET_CHECK_EVERY_SEC` | How often the sheet is checked for changes | `60` |
-| `FIREBOT_PRESET_LIST_ID` | Your Firebot preset list ID ([Step 5](#step-5-connect-firebot-optional)) | empty |
+| `FIREBOT_PRESET_LIST_ID` | Your Firebot preset list ID ([Firebot](#firebot)) | empty |
+| `STREAMERBOT_ACTION_NAME` | Your Streamer.bot action's name ([Streamer.bot](#streamerbot)) | empty |
+| `STREAMERBOT_WS` | Streamer.bot WebSocket Server address | `ws://127.0.0.1:8080/` |
+| `STREAMERBOT_PASSWORD` | Only if WebSocket authentication is on in Streamer.bot | empty |
+| `MIXITUP_COMMAND_ID` | Your Mix It Up command ID ([Mix It Up](#mix-it-up)) | empty |
 
 The game reads chat without logging in, so you never need to enter a password or token.
 
 ## Step 2: Add it to OBS
 
-1. In OBS, click **+** under Sources and choose **Browser**. Name it "Word Scamble."
+1. In OBS, click **+** under Sources and choose **Browser**. Name it "Word Scramble."
 2. Check **Local file**, click **Browse**, and select the game file.
 3. Set **Width** to `1000` and **Height** to `700`. This leaves room for the Large size, the Wide bar layout, and the gear menu. Empty space is transparent.
 4. **Uncheck** "Shutdown source when not visible." If it stays checked, hiding the source stops the game and guesses made while it's hidden are missed.
@@ -122,13 +127,17 @@ The gear only appears while your mouse is over the overlay in the Interact windo
 
 The menu also shows which word list is in use, how many words it has, and when the sheet was last checked.
 
-## Step 5: Connect Firebot (optional)
+## Step 5: Connect a chat bot (optional)
 
-The game can only read chat, so [Firebot](https://firebot.app) handles anything that posts in chat or awards currency. Firebot must be running for this to work; the game itself works fine without it.
+The game can only read chat, so a bot handles anything that posts in chat, plays a sound, or awards points. When someone wins, the game sends your bot three pieces of information: the winner's name, the word, and the winner's total wins.
 
-### Create the preset effect list
+Set up whichever bot you use; you can leave the others blank. The bot must be running for this to work, but the game itself works fine without one.
 
-1. In Firebot, go to **Preset Effect Lists** and create a new one named "Word Scramble"
+### Firebot
+
+**Create the preset effect list**
+
+1. In Firebot, go to **Preset Effect Lists** and create a new one named "Word Scramble."
 2. Under **Arguments**, click **+** three times and name them exactly `username`, `word`, and `wins`.
 3. Add an effect such as **Chat** with a message like:
    ```
@@ -138,15 +147,65 @@ The game can only read chat, so [Firebot](https://firebot.app) handles anything 
 5. Reopen the list and expand **How to trigger from Stream Deck**. Copy only the ID at the end of the URL shown, after `/preset/`.
 6. Paste that ID between the quotes in `FIREBOT_PRESET_LIST_ID`, save, and refresh the browser source.
 
-### Keep a leaderboard in Firebot (optional)
+**Keep a leaderboard in Firebot (optional)**
 
 1. Go to **Currency** and create one, such as "Word Scramble Wins."
 2. Set the payout amounts to **0**, and set **Limit** to a large number like `100000`. A limit of 0 blocks every point.
-3. In the Word Scamble preset list, add an **Update Currency** effect: choose the currency, Operation **Add**, Target **Single User**, Username `$presetListArg[username]`, Amount **1**.
+3. In the Word Scramble preset list, add an **Update Currency** effect: choose the currency, Operation **Add**, Target **Single User**, Username `$presetListArg[username]`, Amount **1**.
 
-The on-screen leaderboard and the Firebot currency count separately. They stay matched as long as Firebot is running whenever the game is, and nobody edits points by hand.
+**To reset both leaderboards:** use **Reset leaderboard** in the gear menu, then run a one-time Update Currency effect in Firebot set to **Set**, **All Viewers**, Amount **0**.
 
-**To reset both:** use **Reset leaderboard** in the gear menu, then run a one-time Update Currency effect in Firebot set to **Set**, **All Viewers**, Amount **0**.
+### Streamer.bot
+
+**Turn on the WebSocket Server**
+
+1. In Streamer.bot, open the **Servers/Clients** tab and choose **WebSocket Server**.
+2. Check **Auto Start**, then click **Start Server**. Leave the address `127.0.0.1`, port `8080`, and endpoint `/` unless you have changed them.
+3. If you turned on authentication there, put the same password in `STREAMERBOT_PASSWORD`. Otherwise leave it blank.
+
+If you use a different address or port, update `STREAMERBOT_WS` to match, for example `ws://127.0.0.1:8081/`.
+
+**Create the action**
+
+1. Open the **Actions** tab, right-click the actions list, and choose **Add**. Name it "Word Scramble Win."
+2. In the sub-actions area, right-click and add what you want to happen. For a chat message, choose **Twitch > Chat > Send Message to Channel** with a message like:
+   ```
+   %username% got it! The word was %word%. That's %wins% wins!
+   ```
+3. Leave the action without a trigger; the game runs it directly.
+4. In the game file, put the action's exact name between the quotes in `STREAMERBOT_ACTION_NAME`, save, and refresh the browser source.
+
+The name must match exactly, including capital letters and spaces. Inside the action, the arguments `%username%`, `%word%`, and `%wins%` are available to any sub-action.
+
+### Mix It Up
+
+**Turn on the Developer API**
+
+1. In Mix It Up, open the **Services** page.
+2. Scroll to **Developer API** and click **Connect**.
+
+**Create the command**
+
+1. Go to **Commands > Action Groups** and create a new one named "Word Scramble Win."
+2. Add a **Chat** action with a message like:
+   ```
+   $arg1text got it! The word was $arg2text. That's $arg3text wins!
+   ```
+3. Save the action group.
+
+**Find the command ID**
+
+1. With Mix It Up running, open this address in your web browser:
+   ```
+   http://localhost:8911/api/v2/commands?pageSize=500
+   ```
+2. Press **Ctrl+F** (or **Cmd+F** on Mac) and search for "Word Scramble Win."
+3. Copy the `ID` value that belongs to it. It's a long code with dashes.
+4. In the game file, paste that ID between the quotes in `MIXITUP_COMMAND_ID`, save, and refresh the browser source.
+
+Inside the command, `$arg1text` is the winner, `$arg2text` is the word, and `$arg3text` is the winner's total wins.
+
+**Award points (optional):** add a **Consumables** action to the action group that adds 1 of your chosen currency to a specific user, using `$arg1text` as the username.
 
 ## Troubleshooting
 
@@ -161,5 +220,7 @@ The on-screen leaderboard and the Firebot currency count separately. They stay m
 | Your sheet words aren't used | Check that the link is the **Publish to web** CSV link, not the normal sheet link. Wait a few minutes for Google to publish edits. |
 | The gear menu says "last copy, sheet not reachable" | Google couldn't be reached; the game keeps using the last list it loaded and retries every 60 seconds. |
 | Firebot effects never run | Firebot must be running. Check the preset ID has no extra spaces, then test the list with its play button. |
+| Streamer.bot action never runs | Check the WebSocket Server is started and the action name matches exactly. If authentication is on, check `STREAMERBOT_PASSWORD`. |
+| Mix It Up command never runs | Check the Developer API is connected on the Services page and the ID was copied in full. |
 | Chat message works but currency doesn't | In the Currency settings, set **Limit** above 0. In the effect, check Amount is 1 and the right currency is picked. |
 | A new word starts every time the source is shown again | Uncheck "Shutdown source when not visible" so the game keeps running while hidden. The leaderboard is saved either way. |

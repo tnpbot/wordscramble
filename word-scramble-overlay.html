@@ -1,0 +1,644 @@
+<!--- Word Game by @teamnopants and Claude.Ai - Go to line 152 and Change CHANNEL to your Twitch channel name 
+You can create a word list in a Google Sheet and publish it to the web as CSV, then paste that link into WORDS_SHEET_URL.
+Or you can change the list of words in BUILTIN_WORDS below. The overlay will pick a random word from the list, and reveal 
+letters over time. Players type guesses in chat. The first correct guess wins the round and gets added to the leaderboard. 
+
+You can change the color theme, size, layout, and other options in OBS by choosing Interact in the browser source and 
+clicking the gear icon in the top right of the overlay.
+
+There are additional options for bot users you can set a preset effect list to run when someone wins (chat shout-out, currency, sound).
+
+You can set a number of options in the interact menu, including whether to show the leaderboard, whether to show a scrambled-letters hint, 
+and how many seconds between reveals.
+
+--->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Word Scramble overlay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;800&display=swap" rel="stylesheet">
+<style>
+/* ================== LOOK ================== */
+:root{
+  --display:"Fredoka","Arial Rounded MT Bold","Trebuchet MS",sans-serif;
+  --body:"Nunito","Segoe UI",system-ui,sans-serif;
+}
+/* Color themes. Each one sets the same six colors plus two tile edges. */
+body{
+  --panel:#2E1A47; --deep:#1F1033; --accent:#C9B6F2; --text:#F1EAFF;
+  --reveal:#8BE3C6; --win:#FFD27A; --tile-edge:#3d2760; --win-edge:#c99a3c;
+}
+body[data-theme="denim"]{
+  --panel:#23395D; --deep:#172640; --accent:#E8A04C; --text:#EEF5FF;
+  --reveal:#9CC3F0; --win:#FFD27A; --tile-edge:#2f4a75; --win-edge:#c99a3c;
+}
+body[data-theme="bubblegum"]{
+  --panel:#5B1E4A; --deep:#3E1232; --accent:#FFA6D2; --text:#FFEAF5;
+  --reveal:#9DE7FF; --win:#FFE27A; --tile-edge:#73285e; --win-edge:#c9a83c;
+}
+body[data-theme="forest"]{
+  --panel:#1E3A2F; --deep:#12261E; --accent:#A8D99B; --text:#ECF7E8;
+  --reveal:#F2E3A0; --win:#F7A35C; --tile-edge:#2a4d3f; --win-edge:#c4793a;
+}
+body[data-theme="midnight"]{
+  --panel:#1B1D25; --deep:#0E0F14; --accent:#8F96A8; --text:#F2F3F7;
+  --reveal:#7FD4FF; --win:#FFD27A; --tile-edge:#2a2c36; --win-edge:#c99a3c;
+}
+body[data-theme="halloween"]{
+  --panel:#1A1210; --deep:#0B0807; --accent:#FF7A1A; --text:#FFF3E6;
+  --reveal:#A6E22E; --win:#C084FC; --tile-edge:#2E201B; --win-edge:#8B5CC9;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:transparent}
+body{background:transparent;color:var(--text);font-family:var(--body);padding:16px}
+
+.panel{
+  width:440px;
+  background:var(--panel);
+  border-radius:22px;
+  padding:18px 20px 16px;
+  position:relative;
+  box-shadow:0 6px 0 var(--deep);
+}
+/* sewn-on patch stitching */
+.panel::before{
+  content:"";position:absolute;inset:7px;border-radius:16px;
+  border:2px dashed var(--accent);opacity:.55;pointer-events:none;
+}
+
+/* Sizes */
+body[data-size="small"] .panel{zoom:.8}
+body[data-size="large"] .panel{zoom:1.3}
+
+.title{
+  font-family:var(--display);font-size:22px;letter-spacing:.5px;
+  color:var(--accent);
+  display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+}
+.title small{font-family:var(--body);font-size:13px;font-weight:600;color:var(--text);opacity:.75}
+
+.tiles{display:flex;gap:7px;justify-content:center;margin:16px 0 12px}
+.tile{
+  flex:0 1 46px;aspect-ratio:4/5;max-width:46px;
+  background:var(--deep);border-radius:9px;
+  display:grid;place-items:center;
+  font-family:var(--display);font-size:30px;line-height:1;
+  color:transparent;
+  border-bottom:3px solid var(--tile-edge);
+}
+.tile.shown{color:var(--reveal)}
+.tile.won{color:var(--panel);background:var(--win);border-bottom-color:var(--win-edge);animation:pop .45s ease-out both}
+@keyframes pop{0%{transform:translateY(6px) scale(.85)}60%{transform:translateY(-4px) scale(1.06)}100%{transform:none}}
+
+/* Optional scrambled-letters hint */
+.scramble{display:none;justify-content:center;flex-wrap:wrap;gap:5px;margin:-4px 0 12px}
+body[data-scramble="on"] .scramble{display:flex}
+.scramble span{min-width:26px;padding:3px 6px;border-radius:7px;text-align:center;
+  font-family:var(--display);font-size:17px;line-height:1.2;color:var(--text);
+  background:color-mix(in srgb, var(--accent) 22%, transparent)}
+
+body[data-reveal="off"] .meter,body[data-reveal="off"] .reveal-sec{display:none}
+.stepper{display:flex;align-items:center;gap:6px}
+.stepper button{flex:0 0 38px;font:inherit;font-weight:800;font-size:18px;cursor:pointer;padding:5px 0;border-radius:9px;background:var(--panel);color:var(--text);border:2px solid transparent}
+.stepper input{flex:1;min-width:0;text-align:center;font:inherit;font-weight:800;font-size:15px;padding:6px 4px;border-radius:9px;border:2px solid var(--accent);background:var(--panel);color:var(--text)}
+.stepper span{opacity:.8;font-size:13px}
+.stepper button:focus-visible,.stepper input:focus-visible{outline:3px solid var(--win);outline-offset:2px}
+
+.meter{height:6px;border-radius:3px;background:var(--deep);overflow:hidden}
+.meter span{display:block;height:100%;width:0;background:var(--accent);border-radius:3px}
+
+.status{margin-top:10px;min-height:22px;font-size:15px;font-weight:800;text-align:center}
+.status.win{color:var(--win)}
+
+.board{margin-top:14px;border-top:2px dashed color-mix(in srgb, var(--accent) 40%, transparent);padding-top:10px}
+.board h2{font-family:var(--display);font-weight:400;font-size:16px;color:var(--accent);margin-bottom:6px}
+.board ol{list-style:none}
+.board li{display:flex;justify-content:space-between;gap:10px;font-size:15px;font-weight:600;padding:2px 0}
+.board li span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.board li b{font-weight:800;color:var(--win);min-width:1.6em;display:inline-block}
+.board li .wins{font-weight:800}
+.board .empty{font-size:14px;opacity:.7}
+
+/* Layout: wide bar puts the leaderboard beside the word */
+body[data-layout="wide"] .panel{
+  width:820px;display:grid;grid-template-columns:1fr 230px;gap:26px;align-items:center;
+}
+body[data-layout="wide"] .board{
+  margin-top:0;padding-top:0;border-top:0;
+  border-left:2px dashed color-mix(in srgb, var(--accent) 40%, transparent);padding-left:22px;
+}
+body[data-layout="wide"][data-board="off"] .panel{width:560px;grid-template-columns:1fr}
+
+/* Show / hide leaderboard */
+body[data-board="off"] .board{display:none}
+
+/* ===== Style options (only visible when you hover with OBS Interact) ===== */
+.gear{
+  position:absolute;top:-10px;right:-10px;z-index:4;
+  width:30px;height:30px;border-radius:50%;
+  border:2px solid var(--accent);background:var(--deep);color:var(--accent);
+  font-size:16px;line-height:1;cursor:pointer;
+  opacity:0;transition:opacity .15s;
+}
+.panel:hover .gear,.gear:focus-visible,body.editing .gear{opacity:1}
+.gear:focus-visible,.settings button:focus-visible{outline:3px solid var(--win);outline-offset:2px}
+
+.settings{
+  position:absolute;top:26px;right:0;z-index:5;width:300px;
+  background:var(--deep);color:var(--text);
+  border:2px solid var(--accent);border-radius:16px;
+  padding:14px;font-size:14px;font-weight:600;
+  box-shadow:0 10px 24px rgba(0,0,0,.35);
+}
+.settings[hidden]{display:none}
+.settings .row{margin-bottom:12px}
+.settings .label{display:block;margin-bottom:6px;opacity:.8}
+.seg{display:flex;gap:6px}
+.seg button,.settings .wide-btn{
+  flex:1;font:inherit;font-weight:800;cursor:pointer;
+  padding:7px 6px;border-radius:9px;
+  background:var(--panel);color:var(--text);border:2px solid transparent;
+}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--deep)}
+.swatches{display:flex;gap:8px}
+.swatch{
+  width:38px;height:38px;border-radius:50%;cursor:pointer;
+  border:3px solid transparent;
+}
+.swatch[aria-pressed="true"]{border-color:var(--text)}
+.settings .wordinfo{font-size:13px;opacity:.75;margin:-2px 0 12px}
+.settings .actions{display:flex;gap:6px;margin-top:4px}
+.settings .wide-btn.danger{border-color:color-mix(in srgb, var(--win) 60%, transparent)}
+
+@media (prefers-reduced-motion:reduce){.tile.won{animation:none}.gear{transition:none}}
+</style>
+</head>
+<body>
+<div class="panel">
+  <div class="game">
+    <div class="title">Guess the word <small id="hint">type your guess in chat</small></div>
+    <div class="tiles" id="tiles"></div>
+    <div class="scramble" id="scramble" aria-label="Scrambled letters"></div>
+    <div class="meter"><span id="meter"></span></div>
+    <div class="status" id="status">Connecting to chat…</div>
+  </div>
+  <div class="board">
+    <h2>Top guessers</h2>
+    <ol id="board"></ol>
+  </div>
+
+  <button class="gear" id="gear" aria-label="Style options" aria-expanded="false">⚙</button>
+  <div class="settings" id="settings" hidden>
+    <div class="row">
+      <span class="label">Color</span>
+      <div class="swatches" id="swatches"></div>
+    </div>
+    <div class="row">
+      <span class="label">Size</span>
+      <div class="seg" data-key="size">
+        <button data-val="small">Small</button><button data-val="medium">Medium</button><button data-val="large">Large</button>
+      </div>
+    </div>
+    <div class="row">
+      <span class="label">Layout</span>
+      <div class="seg" data-key="layout">
+        <button data-val="tall">Tall panel</button><button data-val="wide">Wide bar</button>
+      </div>
+    </div>
+    <div class="row">
+      <span class="label">Leaderboard</span>
+      <div class="seg" data-key="board">
+        <button data-val="on">Show</button><button data-val="off">Hide</button>
+      </div>
+    </div>
+    <div class="row">
+      <span class="label">Reveal letters over time</span>
+      <div class="seg" data-key="reveal">
+        <button data-val="on">On</button><button data-val="off">Off</button>
+      </div>
+    </div>
+    <div class="row reveal-sec">
+      <span class="label">Seconds between reveals</span>
+      <div class="stepper">
+        <button id="secDown" aria-label="Fewer seconds">−</button>
+        <input id="secInput" type="number" min="5" max="600" step="5" aria-label="Seconds between reveals">
+        <button id="secUp" aria-label="More seconds">+</button>
+      </div>
+    </div>
+    <div class="row">
+      <span class="label">Scrambled letters hint</span>
+      <div class="seg" data-key="scramble">
+        <button data-val="on">Show</button><button data-val="off">Hide</button>
+      </div>
+    </div>
+    <p class="wordinfo" id="wordinfo">Word list: built-in</p>
+    <div class="actions">
+      <button class="wide-btn danger" id="resetBoard">Reset leaderboard</button>
+      <button class="wide-btn" id="done">Done</button>
+    </div>
+  </div>
+</div>
+<script>
+/* ================== SETTINGS: edit these ================== */
+const CHANNEL = "";     // your Twitch channel, lowercase, no #
+const REVEAL_EVERY_SEC = 40;             // a new letter appears this often; the last letter is never revealed
+const PAUSE_BETWEEN_WORDS_SEC = 8;       // how long the answer stays up before the next word
+const LEADERBOARD_SIZE = 3;
+const IGNORE_USERS = ["firebot", "nightbot", "streamelements", "sery_bot"]; // bots that should never win (lowercase)
+// Optional: Firebot preset effect list to run when someone wins (chat shout-out, currency, sound).
+// Leave "" to skip. See setup notes for how to get this ID.
+const FIREBOT_PRESET_LIST_ID = "";
+const FIREBOT_API = "";
+
+// Optional: Streamer.bot action to run when someone wins. Use the action's exact name. Leave "" to skip.
+// Needs Streamer.bot's WebSocket Server turned on (Servers/Clients tab).
+const STREAMERBOT_ACTION_NAME = "";
+const STREAMERBOT_WS = "ws://127.0.0.1:8080/";
+const STREAMERBOT_PASSWORD = "";         // only if you turned on WebSocket authentication in Streamer.bot
+
+// Optional: Mix It Up command (or action group) to run when someone wins. Use its ID. Leave "" to skip.
+// Needs Mix It Up's Developer API turned on (Services page).
+const MIXITUP_COMMAND_ID = "";
+const MIXITUP_API = "http://localhost:8911/api/v2/commands/";
+
+// Google Sheet word list. Paste your "Publish to web" CSV link between the quotes.
+// Words go in column A, one per cell. Leave "" to use the built-in list below.
+const WORDS_SHEET_URL = ";
+const SHEET_CHECK_EVERY_SEC = 60;        // how often to look for changes in the sheet
+
+// Built-in list: used when no sheet is set, or if the sheet can't be reached.
+const BUILTIN_WORDS = `
+pants pocket button zipper denim belt jacket sweater mitten scarf
+apple banana cherry lemon mango peach pickle waffle pancake noodle
+pizza taco burrito donut cookie muffin bagel cheese butter toast
+castle dragon wizard knight goblin potion sword shield crown treasure
+planet rocket comet galaxy meteor orbit asteroid nebula
+guitar piano trumpet violin drum banjo
+puppy kitten rabbit turtle parrot hamster otter penguin walrus llama
+garden flower cactus pumpkin acorn forest meadow river canyon island
+pillow blanket candle lantern mirror ladder bucket basket teapot kettle
+pencil eraser crayon marker sticker notebook backpack locker
+bicycle tractor scooter wagon subway airport
+thunder rainbow blizzard tornado sunset
+camera laptop keyboard monitor headset joystick
+`.trim().split(/\s+/).map(w => w.toLowerCase());
+
+/* ================== GAME ================== */
+const $ = id => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+const STORE = "wordhunt-board-" + CHANNEL;
+if (params.has("reset")) { try { localStorage.removeItem(STORE); } catch(e){} }
+
+let board = {};
+try { board = JSON.parse(localStorage.getItem(STORE) || "{}"); } catch(e) { board = {}; }
+
+let activeWords = BUILTIN_WORDS;
+let wordSource = "built-in list";
+let bag = [];            // shuffled words not used yet this cycle
+let word = "";
+let shown = [];          // which letter positions are visible
+let roundOpen = false;
+let revealTimer = null, meterTimer = null;
+
+function nextFromBag(){
+  if (!bag.length) bag = activeWords.filter(w => w !== word).sort(() => Math.random() - .5);
+  if (!bag.length) bag = [...activeWords];
+  return bag.pop();
+}
+
+function render(state){
+  const t = $("tiles");
+  t.innerHTML = "";
+  [...word].forEach((ch, i) => {
+    const d = document.createElement("div");
+    d.className = "tile";
+    if (state === "won") { d.classList.add("won"); d.style.animationDelay = (i * 45) + "ms"; }
+    else if (shown[i]) d.classList.add("shown");
+    d.textContent = ch.toUpperCase();
+    t.appendChild(d);
+  });
+}
+
+function renderBoard(){
+  const top = Object.values(board).sort((a,b) => b.wins - a.wins).slice(0, LEADERBOARD_SIZE);
+  $("board").innerHTML = top.length
+    ? top.map((p,i) => `<li><span><b>${i+1}</b>${escapeHtml(p.name)}</span><span class="wins">${p.wins}</span></li>`).join("")
+    : `<li class="empty">First correct guess takes the top spot.</li>`;
+}
+
+function escapeHtml(s){return s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+
+function renderScramble(letters){
+  $("scramble").innerHTML = letters.map(ch => `<span>${ch.toUpperCase()}</span>`).join("");
+}
+
+function scrambleOf(w){
+  const letters = [...w];
+  for (let tries = 0; tries < 10; tries++) {
+    for (let i = letters.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [letters[i], letters[j]] = [letters[j], letters[i]];
+    }
+    if (letters.join("") !== w) break;   // avoid showing the answer in order
+  }
+  return letters;
+}
+
+function revealOne(){
+  const hidden = shown.map((v,i) => v ? -1 : i).filter(i => i >= 0);
+  const pick = hidden[Math.floor(Math.random() * hidden.length)];
+  shown[pick] = true;
+}
+
+function hiddenCount(){ return shown.filter(v => !v).length; }
+
+function stopTimers(){
+  clearTimeout(revealTimer);
+  clearInterval(meterTimer);
+  $("meter").style.width = "0%";
+}
+
+function scheduleReveal(){
+  stopTimers();
+  if (style.reveal === "off") return;   // timed reveals turned off in the gear menu
+  if (hiddenCount() <= 1) return;   // last letter stays hidden; wait as long as it takes
+  const secs = revealSeconds();
+  const due = Date.now() + secs * 1000;
+  meterTimer = setInterval(() => {
+    const left = Math.max(0, due - Date.now());
+    $("meter").style.width = (100 - left / (secs * 10)) + "%";
+  }, 250);
+  revealTimer = setTimeout(() => {
+    if (!roundOpen) return;
+    revealOne(); render();
+    $("status").textContent = hiddenCount() === 1 ? "One letter left" : "New letter revealed";
+    scheduleReveal();
+  }, secs * 1000);
+}
+
+function newRound(){
+  word = nextFromBag();
+  shown = [...word].map(() => false);
+  revealOne();
+  renderScramble(scrambleOf(word));
+  roundOpen = true;
+  $("status").className = "status";
+  $("status").textContent = `${word.length} letters`;
+  render();
+  scheduleReveal();
+}
+
+function endRound(winner){
+  roundOpen = false;
+  stopTimers();
+  const key = winner.toLowerCase();
+  board[key] = { name: winner, wins: (board[key]?.wins || 0) + 1 };
+  try { localStorage.setItem(STORE, JSON.stringify(board)); } catch(e){}
+  render("won");
+  renderScramble([]);
+  $("status").className = "status win";
+  $("status").textContent = `${winner} got it!`;
+  renderBoard();
+  notifyFirebot(winner, word, board[key].wins);
+  setTimeout(newRound, PAUSE_BETWEEN_WORDS_SEC * 1000);
+}
+
+function checkGuess(user, msg){
+  if (!roundOpen) return;
+  if (IGNORE_USERS.includes(user.toLowerCase())) return;
+  const words = msg.toLowerCase().replace(/[^a-z\s]/g, " ").split(/\s+/);
+  if (words.includes(word)) endRound(user);
+}
+
+function notifyFirebot(username, answer, wins){
+  notifyStreamerbot(username, answer, wins);
+  notifyMixItUp(username, answer, wins);
+  if (!FIREBOT_PRESET_LIST_ID) return;
+  fetch(FIREBOT_API + FIREBOT_PRESET_LIST_ID, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, args: { username, word: answer, wins: String(wins) } })
+  }).catch(() => {}); // the overlay keeps working even if Firebot isn't reachable
+}
+
+/* Streamer.bot: connects to its WebSocket Server, runs the action, then disconnects. */
+async function sha256b64(text){
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return btoa(String.fromCharCode(...new Uint8Array(buf)));
+}
+function notifyStreamerbot(username, answer, wins){
+  if (!STREAMERBOT_ACTION_NAME) return;
+  let ws;
+  try { ws = new WebSocket(STREAMERBOT_WS); } catch(e) { return; }
+  const doAction = () => ws.send(JSON.stringify({
+    request: "DoAction", id: "wordhunt-" + Date.now(),
+    action: { name: STREAMERBOT_ACTION_NAME },
+    args: { username, word: answer, wins: String(wins) }
+  }));
+  let sent = false;
+  ws.onmessage = async e => {
+    if (sent) return;
+    let msg = {}; try { msg = JSON.parse(e.data); } catch(err) {}
+    if (msg.request !== "Hello") return;
+    sent = true;
+    try {
+      const auth = msg.authentication;
+      if (auth && auth.challenge && STREAMERBOT_PASSWORD) {
+        const secret = await sha256b64(STREAMERBOT_PASSWORD + auth.salt);
+        ws.send(JSON.stringify({ request: "Authenticate", id: "wordhunt-auth", authentication: await sha256b64(secret + auth.challenge) }));
+      }
+      doAction();
+    } catch(err) {}
+    setTimeout(() => ws.close(), 2000);
+  };
+  ws.onerror = () => {};
+  setTimeout(() => { try { ws.close(); } catch(e){} }, 8000);
+}
+
+/* Mix It Up: runs a command through its Developer API.
+   Inside the command, $arg1text = winner, $arg2text = word, $arg3text = their total wins. */
+function notifyMixItUp(username, answer, wins){
+  if (!MIXITUP_COMMAND_ID) return;
+  fetch(MIXITUP_API + MIXITUP_COMMAND_ID, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ Platform: "Twitch", Arguments: `${username} ${answer} ${wins}` })
+  }).catch(() => {});
+}
+
+/* ================== TWITCH CHAT (read-only, no login needed) ================== */
+function connect(){
+  const ws = new WebSocket("wss://irc-ws.chat.twitch.tv:443");
+  ws.onopen = () => {
+    ws.send("CAP REQ :twitch.tv/tags");
+    ws.send("PASS SCHMOOPIIE");
+    ws.send("NICK justinfan" + Math.floor(10000 + Math.random() * 80000));
+    ws.send("JOIN #" + CHANNEL.toLowerCase());
+  };
+  ws.onmessage = e => {
+    e.data.split("\r\n").forEach(line => {
+      if (!line) return;
+      if (line.startsWith("PING")) { ws.send("PONG :tmi.twitch.tv"); return; }
+      if (line.includes(" 366 ") && !word) newRound();   // joined channel: start the first word
+      const m = line.match(/^(?:@(\S+) )?:(\w+)!\S+ PRIVMSG #\S+ :(.*)$/);
+      if (!m) return;
+      const tags = Object.fromEntries((m[1] || "").split(";").map(kv => kv.split("=")));
+      checkGuess(tags["display-name"] || m[2], m[3]);
+    });
+  };
+  ws.onclose = () => {
+    $("status").textContent = "Reconnecting to chat…";
+    setTimeout(connect, 3000);
+  };
+}
+
+/* ================== STYLE OPTIONS ================== */
+const THEMES = {
+  lavender:  { name:"Lavender",  colors:["#2E1A47","#C9B6F2"] },
+  denim:     { name:"Denim",     colors:["#23395D","#E8A04C"] },
+  bubblegum: { name:"Bubblegum", colors:["#5B1E4A","#FFA6D2"] },
+  forest:    { name:"Forest",    colors:["#1E3A2F","#A8D99B"] },
+  midnight:  { name:"Midnight",  colors:["#1B1D25","#7FD4FF"] },
+  halloween: { name:"Halloween", colors:["#1A1210","#FF7A1A"] },
+};
+const STYLE_STORE = "wordhunt-style-" + CHANNEL;
+const style = { theme:"lavender", size:"medium", layout:"tall", board:"on", scramble:"off", reveal:"on", revealSec:REVEAL_EVERY_SEC };
+try { Object.assign(style, JSON.parse(localStorage.getItem(STYLE_STORE) || "{}")); } catch(e){}
+
+const swatchBox = $("swatches");
+Object.entries(THEMES).forEach(([key, t]) => {
+  const b = document.createElement("button");
+  b.className = "swatch";
+  b.dataset.val = key;
+  b.title = t.name;
+  b.setAttribute("aria-label", t.name + " colors");
+  b.style.background = `linear-gradient(135deg, ${t.colors[0]} 50%, ${t.colors[1]} 50%)`;
+  b.onclick = () => setStyle("theme", key);
+  swatchBox.appendChild(b);
+});
+document.querySelectorAll(".seg").forEach(seg => {
+  seg.querySelectorAll("button").forEach(b => b.onclick = () => setStyle(seg.dataset.key, b.dataset.val));
+});
+
+function setStyle(key, val){
+  style[key] = val; applyStyle();
+  if ((key === "reveal" || key === "revealSec") && roundOpen) scheduleReveal();   // apply right away
+}
+
+function revealSeconds(){
+  const n = Math.round(Number(style.revealSec));
+  return Math.min(600, Math.max(5, isFinite(n) && n > 0 ? n : REVEAL_EVERY_SEC));
+}
+function setSeconds(n){ style.revealSec = Math.min(600, Math.max(5, Math.round(n) || REVEAL_EVERY_SEC)); $("secInput").value = style.revealSec; setStyle("revealSec", style.revealSec); }
+$("secDown").onclick = () => setSeconds(revealSeconds() - 5);
+$("secUp").onclick = () => setSeconds(revealSeconds() + 5);
+$("secInput").onchange = e => setSeconds(Number(e.target.value));
+$("secInput").value = revealSeconds();
+
+function applyStyle(){
+  Object.entries(style).forEach(([k,v]) => document.body.dataset[k] = v);
+  swatchBox.querySelectorAll(".swatch").forEach(b => b.setAttribute("aria-pressed", b.dataset.val === style.theme));
+  document.querySelectorAll(".seg").forEach(seg => {
+    seg.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.val === style[seg.dataset.key]));
+  });
+  try { localStorage.setItem(STYLE_STORE, JSON.stringify(style)); } catch(e){}
+}
+
+function toggleSettings(open){
+  $("settings").hidden = !open;
+  $("gear").setAttribute("aria-expanded", open);
+  document.body.classList.toggle("editing", open);
+}
+$("gear").onclick = () => toggleSettings($("settings").hidden);
+$("done").onclick = () => toggleSettings(false);
+document.addEventListener("keydown", e => { if (e.key === "Escape") toggleSettings(false); });
+
+let resetArmed = null;
+$("resetBoard").onclick = () => {
+  const btn = $("resetBoard");
+  if (resetArmed) {
+    clearTimeout(resetArmed); resetArmed = null;
+    board = {};
+    try { localStorage.removeItem(STORE); } catch(e){}
+    renderBoard();
+    btn.textContent = "Leaderboard reset";
+    setTimeout(() => btn.textContent = "Reset leaderboard", 2000);
+  } else {
+    btn.textContent = "Click again to reset";
+    resetArmed = setTimeout(() => { resetArmed = null; btn.textContent = "Reset leaderboard"; }, 4000);
+  }
+};
+
+/* ================== GOOGLE SHEET WORD LIST ================== */
+const SHEET_STORE = "wordhunt-sheet-words-" + CHANNEL;
+let lastSheetCheck = null;
+
+function parseSheet(csv){
+  const seen = new Set();
+  csv.split(/\r?\n/).forEach(line => {
+    const cell = line.split(",")[0].replace(/"/g, "").trim().toLowerCase();
+    if (/^[a-z]{2,15}$/.test(cell) && cell !== "word" && cell !== "words") seen.add(cell);
+  });
+  return [...seen];
+}
+
+function useWords(list, source){
+  const changed = list.join() !== activeWords.join();
+  activeWords = list;
+  wordSource = source;
+  if (changed) bag = [];   // reshuffle with the new list starting from the next word
+  updateWordInfo();
+}
+
+function updateWordInfo(){
+  let text = `Word list: ${activeWords.length} words from ${wordSource}`;
+  if (lastSheetCheck) text += `, checked ${lastSheetCheck.toLocaleTimeString([], {hour:"numeric", minute:"2-digit"})}`;
+  $("wordinfo").textContent = text;
+}
+
+async function loadSheet(){
+  if (!WORDS_SHEET_URL) return;
+  const ctrl = new AbortController();
+  const stop = setTimeout(() => ctrl.abort(), 8000);
+  try {
+    const url = WORDS_SHEET_URL + (WORDS_SHEET_URL.includes("?") ? "&" : "?") + "cb=" + Date.now();
+    const res = await fetch(url, { signal: ctrl.signal, cache: "no-store" });
+    if (!res.ok) throw new Error(res.status);
+    const list = parseSheet(await res.text());
+    if (!list.length) throw new Error("no words found");
+    lastSheetCheck = new Date();
+    try { localStorage.setItem(SHEET_STORE, JSON.stringify(list)); } catch(e){}
+    useWords(list, "your sheet");
+  } catch (e) {
+    // Keep whatever list is already in use; say so in the style menu.
+    wordSource = wordSource.includes("sheet") ? "your sheet (last copy, sheet not reachable)" : wordSource;
+    updateWordInfo();
+  } finally {
+    clearTimeout(stop);
+  }
+}
+
+// If the sheet has loaded before, start from that copy instead of the built-in list.
+if (WORDS_SHEET_URL) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SHEET_STORE) || "[]");
+    if (saved.length) useWords(saved, "your sheet (saved copy)");
+  } catch(e){}
+  setInterval(loadSheet, SHEET_CHECK_EVERY_SEC * 1000);
+}
+updateWordInfo();
+
+applyStyle();
+renderBoard();
+if (CHANNEL === "your_channel_name") {
+  $("status").textContent = "Set CHANNEL at the top of this file";
+} else {
+  loadSheet().finally(connect);   // try the sheet first so the first word comes from it
+}
+</script>
+</body>
+</html>
