@@ -1,4 +1,4 @@
-# Word Hunt
+# Word Scramble v1
 
 A hands-off Twitch chat word guessing game for OBS. Viewers type guesses in chat whenever they like, and the first correct guess wins the round.
 
