@@ -20,14 +20,14 @@ A hands-off Twitch chat word guessing game for OBS. Viewers type guesses in chat
 ## Requirements
 
 - **OBS Studio**, or another streaming app that supports browser sources
-- **The Word Hunt game file**, the `.html` file in this repository
+- **The Word Scramble game file**, the `.html` file in this repository
 - **A text editor** such as Notepad (Windows), TextEdit in plain text mode (Mac), or VS Code
 - **A Google account** (optional), for your own live word list
 - **Firebot** (optional), for chat announcements and currency
 
 ## Step 1: Save the file and set your channel
 
-Download the game file and put it in a folder you won't move, such as `Documents/Stream Overlays/Word Hunt`. OBS loads it from that location every time.
+Download the game file and put it in a folder you won't move, such as `Documents/Stream Overlays/Word Scramble`. OBS loads it from that location every time.
 
 1. Open the game file in your text editor (right-click it, then **Open with**). Don't double-click it, since that opens it in a web browser instead.
 2. Find the **SETTINGS** section near the top of the script.
@@ -53,7 +53,7 @@ The game reads chat without logging in, so you never need to enter a password or
 
 ## Step 2: Add it to OBS
 
-1. In OBS, click **+** under Sources and choose **Browser**. Name it "Word Hunt."
+1. In OBS, click **+** under Sources and choose **Browser**. Name it "Word Scamble."
 2. Check **Local file**, click **Browse**, and select the game file.
 3. Set **Width** to `1000` and **Height** to `700`. This leaves room for the Large size, the Wide bar layout, and the gear menu. Empty space is transparent.
 4. **Uncheck** "Shutdown source when not visible." If it stays checked, hiding the source stops the game and guesses made while it's hidden are missed.
@@ -70,7 +70,7 @@ Out of the box, the game uses its built-in list of about 100 everyday words. Mak
 
 ### Create the sheet
 
-1. Go to [sheets.google.com](https://sheets.google.com) and create a blank spreadsheet. Give it a name like "Word Hunt Words."
+1. Go to [sheets.google.com](https://sheets.google.com) and create a blank spreadsheet. Give it a name like "Word Scramble Words."
 2. Type **Words** in cell A1 as a header. It's skipped by the game.
 3. Starting in A2, type one word per cell going down **column A**. Leave the other columns empty.
 
@@ -100,7 +100,7 @@ The game checks the sheet every 60 seconds and uses new words starting with the 
 
 All display and game options are set from a gear menu on the overlay, and every choice is saved between streams.
 
-1. Make sure the Word Hunt source is **visible** (eye icon on). A hidden source shows nothing in Interact.
+1. Make sure the Word Scramble source is **visible** (eye icon on). A hidden source shows nothing in Interact.
 2. Right-click the source and choose **Interact**.
 3. Move your mouse over the overlay. A gear appears in its top-right corner. Click it.
 4. Tap the options you want; they change right away. Click **Done** when finished.
@@ -126,7 +126,7 @@ The game can only read chat, so [Firebot](https://firebot.app) handles anything 
 
 ### Create the preset effect list
 
-1. In Firebot, go to **Preset Effect Lists** and create a new one named "Word Hunt."
+1. In Firebot, go to **Preset Effect Lists** and create a new one named "Word Scramble"
 2. Under **Arguments**, click **+** three times and name them exactly `username`, `word`, and `wins`.
 3. Add an effect such as **Chat** with a message like:
    ```
@@ -138,9 +138,9 @@ The game can only read chat, so [Firebot](https://firebot.app) handles anything 
 
 ### Keep a leaderboard in Firebot (optional)
 
-1. Go to **Currency** and create one, such as "Word Hunt Wins."
+1. Go to **Currency** and create one, such as "Word Scramble Wins."
 2. Set the payout amounts to **0**, and set **Limit** to a large number like `100000`. A limit of 0 blocks every point.
-3. In the Word Hunt preset list, add an **Update Currency** effect: choose the currency, Operation **Add**, Target **Single User**, Username `$presetListArg[username]`, Amount **1**.
+3. In the Word Scamble preset list, add an **Update Currency** effect: choose the currency, Operation **Add**, Target **Single User**, Username `$presetListArg[username]`, Amount **1**.
 
 The on-screen leaderboard and the Firebot currency count separately. They stay matched as long as Firebot is running whenever the game is, and nobody edits points by hand.
 
