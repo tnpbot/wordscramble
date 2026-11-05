@@ -96,7 +96,6 @@ Out of the box, the game uses its built-in list of about 100 everyday words. Mak
 - Words of 5 to 10 letters tend to play best. Very short words get guessed instantly.
 - Avoid words people type in normal chat (like "hello" or "stream"), or someone may win by accident.
 - A themed list works well, for example a holiday, a season, or a game you play on stream. Aim for at least 50 words so repeats are rare.
-- If you later have a list saved as a `.csv` file, you can load it with **File > Import > Upload**, then choose **Replace current sheet**.
 
 ### How updates work
 
