@@ -6,6 +6,8 @@ A hands-off Twitch chat word guessing game for OBS. Viewers type guesses in chat
 - More letters can appear on a timer, but the last letter is never revealed.
 - The winner goes on the on-screen leaderboard, and the next word starts a few seconds later.
 - No commands, mods, or streamer involvement are needed once it's running.
+- No Twitch authorization needed - only reads chat
+- Connect Firebot, Streamer.bot or MixItUp to add chat messaging
 
 ## Contents
 
