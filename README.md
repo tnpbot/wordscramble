@@ -6,8 +6,6 @@ A hands-off Twitch chat word guessing game for OBS. Viewers type guesses in chat
 - More letters can appear on a timer, but the last letter is never revealed.
 - The winner goes on the on-screen leaderboard, and the next word starts a few seconds later.
 - No commands, mods, or streamer involvement are needed once it's running.
-- No Twitch authorization needed - only reads chat
-- Connect Firebot, Streamer.bot or MixItUp to add chat messaging
 
 ## Contents
 
@@ -118,7 +116,7 @@ The gear only appears while your mouse is over the overlay in the Interact windo
 
 | Option | Choices |
 | --- | --- |
-| Color | Lavender, Denim, Bubblegum, Forest, Midnight, Halloween |
+| Color | Lavender, Denim, Bubblegum, Forest, Midnight, Halloween, Rose, Dark Rose ([previews](#color-themes)) |
 | Size | Small, Medium, Large |
 | Layout | Tall panel, or Wide bar with the leaderboard beside the word |
 | Leaderboard | Show or Hide |
@@ -128,6 +126,21 @@ The gear only appears while your mouse is over the overlay in the Interact windo
 | Reset leaderboard | Click twice to confirm |
 
 The menu also shows which word list is in use, how many words it has, and when the sheet was last checked.
+
+### Color themes
+
+All previews show the Medium size and Tall panel layout. Light themes like Rose stand out most on dark game footage; dark themes blend in more quietly.
+
+| | |
+| :---: | :---: |
+| <img src="images/themes/lavender.png" width="360" alt="Lavender theme preview"> | <img src="images/themes/denim.png" width="360" alt="Denim theme preview"> |
+| **Lavender** | **Denim** |
+| <img src="images/themes/bubblegum.png" width="360" alt="Bubblegum theme preview"> | <img src="images/themes/forest.png" width="360" alt="Forest theme preview"> |
+| **Bubblegum** | **Forest** |
+| <img src="images/themes/midnight.png" width="360" alt="Midnight theme preview"> | <img src="images/themes/halloween.png" width="360" alt="Halloween theme preview"> |
+| **Midnight** | **Halloween** |
+| <img src="images/themes/rose.png" width="360" alt="Rose theme preview"> | <img src="images/themes/rosedark.png" width="360" alt="Dark Rose theme preview"> |
+| **Rose** | **Dark Rose** |
 
 ## Step 5: Connect a chat bot (optional)
 
