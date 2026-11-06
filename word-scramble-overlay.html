@@ -1,23 +1,3 @@
-<!--- Word Game by @teamnopants and Claude.Ai --- 
-
-See full instructions on Github README https://github.com/tnpbot/wordscramble
-
-Just get going, nothing fancy: 
-Go to line 257 and Change CHANNEL to your Twitch channel name 
-You can create a word list in a Google Sheet and publish it to the web as CSV, then paste that link into WORDS_SHEET_URL.
-Or you can change the list of words in BUILTIN_WORDS below. The overlay will pick a random word from the list, and reveal 
-letters over time. Players type guesses in chat. The first correct guess wins the round and gets added to the leaderboard. 
-
-You can change the color theme, size, layout, and other options in OBS by choosing Interact in the browser source and 
-clicking the gear icon in the top right of the overlay.
-
-There are additional options for bot users you can set a preset effect list to run when someone wins (chat shout-out, currency, sound).
-
-You can set a number of options in the interact menu, including whether to show the leaderboard, whether to show a scrambled-letters hint, 
-and how many seconds between reveals.
-
---->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -110,12 +90,17 @@ body[data-size="large"] .panel{zoom:1.3}
 @keyframes pop{0%{transform:translateY(6px) scale(.85)}60%{transform:translateY(-4px) scale(1.06)}100%{transform:none}}
 
 /* Optional scrambled-letters hint */
-.scramble{display:none;justify-content:center;flex-wrap:wrap;gap:5px;margin:-4px 0 12px}
+.scramble{display:none;justify-content:center;flex-wrap:nowrap;gap:5px;margin:-2px 0 14px}
 body[data-scramble="on"] .scramble{display:flex}
-.scramble span{min-width:26px;padding:3px 6px;border-radius:7px;text-align:center;
-  font-family:var(--display);font-size:17px;line-height:1.2;color:var(--text);
+.scramble span{flex:0 1 calc(var(--hint-size,26px) * 1.4);min-width:0;padding:4px 0;border-radius:9px;text-align:center;
+  font-family:var(--display);font-size:var(--hint-size,26px);line-height:1.2;color:var(--text);
   background:color-mix(in srgb, var(--accent) 22%, transparent)}
 
+body[data-scramble="off"] .hint-size{display:none}
+.range{display:flex;align-items:center;gap:10px}
+.range input{flex:1;accent-color:var(--accent);cursor:pointer}
+.range output{min-width:3.2em;text-align:right;font-weight:800}
+.range input:focus-visible{outline:3px solid var(--win);outline-offset:2px}
 body[data-reveal="off"] .meter,body[data-reveal="off"] .reveal-sec{display:none}
 .stepper{display:flex;align-items:center;gap:6px}
 .stepper button{flex:0 0 38px;font:inherit;font-weight:800;font-size:18px;cursor:pointer;padding:5px 0;border-radius:9px;background:var(--panel);color:var(--text);border:2px solid transparent}
@@ -179,7 +164,8 @@ body[data-board="off"] .board{display:none}
   background:var(--panel);color:var(--text);border:2px solid transparent;
 }
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--deep)}
-.swatches{display:flex;gap:8px}
+.swatches{display:flex;flex-wrap:wrap;gap:8px}
+.swatch{flex:0 0 38px}
 .swatch{
   width:38px;height:38px;border-radius:50%;cursor:pointer;
   border:3px solid transparent;
@@ -250,6 +236,13 @@ body[data-board="off"] .board{display:none}
         <button data-val="on">Show</button><button data-val="off">Hide</button>
       </div>
     </div>
+    <div class="row hint-size">
+      <span class="label">Hint letter size</span>
+      <div class="range">
+        <input id="hintSize" type="range" min="16" max="40" step="2" aria-label="Hint letter size">
+        <output id="hintSizeOut" for="hintSize"></output>
+      </div>
+    </div>
     <p class="wordinfo" id="wordinfo">Word list: built-in</p>
     <div class="actions">
       <button class="wide-btn danger" id="resetBoard">Reset leaderboard</button>
@@ -259,14 +252,14 @@ body[data-board="off"] .board{display:none}
 </div>
 <script>
 /* ================== SETTINGS: edit these ================== */
-const CHANNEL = "";     // your Twitch channel in between the "", lowercase, no @
+const CHANNEL = "your_channel_name";     // your Twitch channel, lowercase, no #
 const REVEAL_EVERY_SEC = 40;             // a new letter appears this often; the last letter is never revealed
 const PAUSE_BETWEEN_WORDS_SEC = 8;       // how long the answer stays up before the next word
 const LEADERBOARD_SIZE = 3;
 const IGNORE_USERS = ["firebot", "nightbot", "streamelements", "sery_bot"]; // bots that should never win (lowercase)
 // Optional: Firebot preset effect list to run when someone wins (chat shout-out, currency, sound).
 // Leave "" to skip. See setup notes for how to get this ID.
-const FIREBOT_PRESET_LIST_ID = "";
+const FIREBOT_PRESET_LIST_ID = "preset_id";
 const FIREBOT_API = "http://localhost:7472/api/v1/effects/preset/";
 
 // Optional: Streamer.bot action to run when someone wins. Use the action's exact name. Leave "" to skip.
@@ -282,7 +275,7 @@ const MIXITUP_API = "http://localhost:8911/api/v2/commands/";
 
 // Google Sheet word list. Paste your "Publish to web" CSV link between the quotes.
 // Words go in column A, one per cell. Leave "" to use the built-in list below.
-const WORDS_SHEET_URL = "";
+const WORDS_SHEET_URL = "google_file_link_csv";
 const SHEET_CHECK_EVERY_SEC = 60;        // how often to look for changes in the sheet
 
 // Built-in list: used when no sheet is set, or if the sheet can't be reached.
@@ -523,7 +516,7 @@ const THEMES = {
   rosedark:  { name:"Dark Rose", colors:["#7A0F3C","#FFC2D8"] },
 };
 const STYLE_STORE = "wordhunt-style-" + CHANNEL;
-const style = { theme:"lavender", size:"medium", layout:"tall", board:"on", scramble:"off", reveal:"on", revealSec:REVEAL_EVERY_SEC };
+const style = { theme:"lavender", size:"medium", layout:"tall", board:"on", scramble:"off", hintSize:26, reveal:"on", revealSec:REVEAL_EVERY_SEC };
 try { Object.assign(style, JSON.parse(localStorage.getItem(STYLE_STORE) || "{}")); } catch(e){}
 
 const swatchBox = $("swatches");
@@ -544,6 +537,7 @@ document.querySelectorAll(".seg").forEach(seg => {
 function setStyle(key, val){
   style[key] = val; applyStyle();
   if ((key === "reveal" || key === "revealSec") && roundOpen) scheduleReveal();   // apply right away
+  if (key === "hintSize") showHintSize();
 }
 
 function revealSeconds(){
@@ -555,6 +549,16 @@ $("secDown").onclick = () => setSeconds(revealSeconds() - 5);
 $("secUp").onclick = () => setSeconds(revealSeconds() + 5);
 $("secInput").onchange = e => setSeconds(Number(e.target.value));
 $("secInput").value = revealSeconds();
+
+function hintSize(){ const n = Number(style.hintSize); return Math.min(40, Math.max(16, isFinite(n) && n > 0 ? n : 26)); }
+function showHintSize(){
+  document.body.style.setProperty("--hint-size", hintSize() + "px");
+  $("hintSize").value = hintSize();
+  $("hintSizeOut").textContent = hintSize() + "px";
+}
+$("hintSize").oninput = e => { style.hintSize = Number(e.target.value); showHintSize(); };
+$("hintSize").onchange = e => setStyle("hintSize", Number(e.target.value));   // saves the choice
+showHintSize();
 
 function applyStyle(){
   Object.entries(style).forEach(([k,v]) => document.body.dataset[k] = v);
