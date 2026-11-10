@@ -5,6 +5,7 @@ A hands-off Twitch chat word guessing game for OBS. Viewers type guesses in chat
 - Each word starts with one random letter showing.
 - More letters can appear on a timer, but the last letter is never revealed.
 - The winner goes on the on-screen leaderboard, and the next word starts a few seconds later.
+- An optional scrambled-letters hint shows the whole word mixed up, and can reshuffle itself on a timer.
 - No commands, mods, or streamer involvement are needed once it's running.
 - No Twitch authorization needed - only reads chat
 - Connect Firebot, Streamer.bot or MixItUp to add chat messaging
@@ -64,7 +65,7 @@ The game reads chat without logging in, so you never need to enter a password or
 
 1. In OBS, click **+** under Sources and choose **Browser**. Name it "Word Scramble."
 2. Check **Local file**, click **Browse**, and select the game file.
-3. Set **Width** to `1000` and **Height** to `700`. This leaves room for the Large size, the Wide bar layout, and the gear menu. Empty space is transparent.
+3. Set **Width** to `1000` and **Height** to `900`. This leaves room for the Large size, the Wide bar layout, and the full gear menu. Empty space is transparent.
 4. **Uncheck** "Shutdown source when not visible." If it stays checked, hiding the source stops the game and guesses made while it's hidden are missed.
 5. Click **OK**, then drag and resize the game where you want it in your scene.
 
@@ -124,9 +125,14 @@ The gear only appears while your mouse is over the overlay in the Interact windo
 | Reveal letters over time | On, or Off (only the starting letter shows) |
 | Seconds between reveals | 5 to 600; use − and + or type a number (shown only when reveals are on) |
 | Scrambled letters hint | Show or Hide a row of the word's letters in mixed-up order |
+| Hint letter size | Slider from 16 to 40 pixels (shown only when the hint is on) |
+| Reshuffle hint letters over time | On or Off; the hint letters gently fade and rearrange (shown only when the hint is on) |
+| Seconds between reshuffles | 5 to 300, default 20; use − and + or type a number (shown only when reshuffling is on) |
 | Reset leaderboard | Click twice to confirm |
 
 The menu also shows which word list is in use, how many words it has, and when the sheet was last checked.
+
+The hint letters never appear in the correct spelling order, and reshuffling stops as soon as someone wins.
 
 ### Color themes
 
@@ -232,7 +238,7 @@ Inside the command, `$arg1text` is the winner, `$arg2text` is the word, and `$ar
 | Correct guesses don't count | Make sure the guesser isn't in `IGNORE_USERS`. The word must appear as its own word in the message. |
 | Changes to the file don't show | Properties > **Refresh cache of current page**. |
 | Can't find the gear | Turn the source's visibility on, open **Interact**, and hover over the overlay's top-right corner. |
-| Bottom of the gear menu is cut off | Make the browser source at least 700 pixels tall. |
+| Bottom of the gear menu is cut off | Make the browser source at least 900 pixels tall. |
 | Your sheet words aren't used | Check that the link is the **Publish to web** CSV link, not the normal sheet link. Wait a few minutes for Google to publish edits. |
 | The gear menu says "last copy, sheet not reachable" | Google couldn't be reached; the game keeps using the last list it loaded and retries every 60 seconds. |
 | Firebot effects never run | Firebot must be running. Check the preset ID has no extra spaces, then test the list with its play button. |
